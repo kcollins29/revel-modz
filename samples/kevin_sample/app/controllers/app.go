@@ -5,7 +5,7 @@ import (
 
 	"github.com/robfig/revel"
 
-	"<no value>/kevin_sample/app/routes"
+	"github.com/iassic/revel-modz/samples/kevin_sample/app/routes"
 )
 
 type App struct {
