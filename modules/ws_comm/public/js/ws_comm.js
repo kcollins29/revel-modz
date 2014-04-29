@@ -47,14 +47,14 @@ var websock_comm = (function($) {
         };
 
         _socket.onmessage = function(e) {
-            // console.log("Client <-- Server")
+            console.log("Client <-- Server")
             handleMessage(e.data);
         }
     }
 
 
     WS_COMM.Send = function(msg) {
-        // console.log("Client --> Server")
+        console.log("Client --> Server")
         _socket.send(msg); // Send a nice message to the server
     }
 

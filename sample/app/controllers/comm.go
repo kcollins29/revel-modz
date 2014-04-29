@@ -1,12 +1,15 @@
 package controllers
 
 import (
-	"os"
-
 	"code.google.com/p/go.net/websocket"
+	"github.com/iassic/revel-modz/modules/user-files"
 	"github.com/iassic/revel-modz/modules/ws_comm"
 	"github.com/revel/revel"
 	"github.com/revel/revel/mail"
+	"os"
+	"strconv"
+	"strings"
+	//"~/gocode/src/github.com/iassic/revel-modz/modules/user-files/userfiles.go"
 )
 
 func (c User) Comm(ws *websocket.Conn) revel.Result {
@@ -14,9 +17,15 @@ func (c User) Comm(ws *websocket.Conn) revel.Result {
 
 	comm := ws_comm.New()
 	comm.AddHandler("echo", echoHandler)
+	if user != nil {
+		comm.AddHandler("filecmd", func(msg string, outbound chan string) {
+			uId := user.UserId
+			fileCommandHandler(uId, msg, outbound)
+		})
 
-	if user.UserId == 200001 {
-		comm.AddHandler("email", emailHandler)
+		if user.UserId == 200001 {
+			comm.AddHandler("email", emailHandler)
+		}
 	}
 
 	comm.Serve(ws)
@@ -43,6 +52,42 @@ func emailHandler(msg string, outbound chan string) {
 		return
 	}
 	outbound <- "error unknown email command"
+}
+
+func fileCommandHandler(uId int64, msg string, outbound chan string) { //error (return type)
+	var resp_body string
+	fields := strings.Fields(msg)
+	cmd := fields[0]
+	switch cmd {
+	case "delete":
+		fileIdStr := fields[1]
+
+		//parsedUID := strconv.ParseInt(userIdStr, 0, 64) //may not need
+		dsID, err := strconv.ParseInt(fileIdStr, 0, 64)
+		if err != nil {
+			revel.ERROR.Printf("%s\n", "ERROR Parsing fileIdStr in comm.go")
+		}
+
+		revel.WARN.Printf("UID in comm.go fileCommandHandler() for delete: %d\n", uId)
+		revel.WARN.Printf("dsID in comm.go fileCommandHandler() for delete: %d\n", dsID)
+		deleteOutcome, delErr := userfiles.DeleteUserFileById(TestDB, uId, dsID)
+		if delErr != nil {
+			revel.WARN.Printf("DELETE FROM DB %t\n", deleteOutcome)
+		}
+		revel.WARN.Printf("DELETE FROM DB %t\n", deleteOutcome)
+
+		resp_body = "success"
+
+	case "update":
+
+	default:
+		resp_body = "Unknown file Command"
+	}
+
+	resp := "filecmd_response " + resp_body
+	revel.WARN.Printf("%q\n", resp)
+	outbound <- resp
+	//return nil
 }
 
 func sendTestMessage() error {

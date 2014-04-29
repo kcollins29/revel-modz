@@ -64,14 +64,14 @@ function init_dynatree() {
         onExpand: function(flag, node) {
             var childNodes = node.childList;
             if (flag) {
-                console.log("You expanded node with data title " + node.data.title);
+                //console.log("You expanded node with data title " + node.data.title);
 
 
-                console.log(childNodes);
+                //console.log(childNodes);
 
                 //console.log(childNodes);
                 console.log("node: ",node);
-                console.log("Path of selected node: ",node.data.key);
+                //console.log("Path of selected node: ",node.data.key);
                 fileview.curr_tree_selection = node.tree
                 fileview.curr_path = node.data.key;
 
@@ -156,12 +156,40 @@ function deleteFolder(){
      if(tree != null){
          var node = $("#tree").dynatree("getActiveNode");
          console.log("active node in delete",node);
-         console.log("node[0].parent.data.isFolder",node[0].parent.data.isFolder);
-         if(node == null && node[0].parent.data.isFolder == true){
+         //var node_children = node.getChildren();
+         //console.log("node children[0]: ",node_children[0]);
+         //console.log("node[0].parent.data.isFolder",node_children[0].parent.data.isFolder);
+         //if(node != null && node.getChildren()[0].parent.data.isFolder == true){
+            if(node != null && node.data.isFolder == true){
+                //var children = node.getChildren();
+                var numChildren = node.childList.length;
+                
+                for(i=0;i<numChildren; i++){
+                    var del_cmd = "filecmd delete ";
+                    var dataID = node.childList[i].data.data_id;
+                    del_cmd += dataID;
+                    console.log(del_cmd);
+                    console.log("child data_id: ", i, dataID);
+                    websock_comm.Send(del_cmd);
+                    
+                }
+                var del_cmd = "filecmd delete ";
+                dataID = node.data.data_id;
+                del_cmd += dataID;
+                console.log(del_cmd);
+                console.log("parent data_id: ", dataID);
 
-           node.remove()
+         // add other details
+            websock_comm.Send(del_cmd);
+           node.remove();
+           //clearRightPanel();
+           renderFileRightPanel(node.parent.getChildren());
+
         }
-         node.remove();
+         //node.remove();
+
+
+         
         else{
             console.log("tree: ", tree);
             console.log("node: ", node);
@@ -170,14 +198,54 @@ function deleteFolder(){
     else{
         console.log("Attempting to remove unselected folder");
     }
-    renderFileRightPanel(node.getChildren());
+    
 }
-function deleteFile(){
-    var tree = fileview.curr_tree_selection;
-    var node = $("#tree").dynatree("getSelectedNode");
+function deleteFile(data){
+    console.log("made it to deleteFile after button press");
+    console.log("param data: ",data);
+   var tree = fileview.curr_tree_selection;
+     if(tree != null){
+         //var node = $("#tree").dynatree("getActiveNode");
+         //console.log("active node in delete",data);
+         //var node_children = node.getChildren();
+         //console.log("node children[0]: ",node_children[0]);
+         //console.log("node[0].parent.data.isFolder",node_children[0].parent.data.isFolder);
+         //if(node != null && node.getChildren()[0].parent.data.isFolder == true){
+         /*   if(node != null && node.data.isFolder == false){
+            var del_cmd = "filecmd delete ";
+           var dataID = node.data.data_id;
+           del_cmd += dataID;
+           console.log(del_cmd);
+           console.log("data_id: ", dataID);
+
+         // add other details
+            websock_comm.Send(del_cmd);
+           node.remove();
+           //clearRightPanel();
+           renderFileRightPanel(node.parent.getChildren());
+
+        }
+         //node.remove();
+
+
+         
+        else{
+            console.log("tree: ", tree);
+            console.log("node: ", node);
+        } */
+    }
+    else{
+        console.log("Attempting to remove unselected file");
+    }
 }
 function addDataFile(files) {
 
+    var tree = fileview.curr_tree_selection;
+    console.log("current tree selection: ", tree);
+    //if there is no root, ie no added files yet, upload them as is
+    if(tree == null){
+        uploadDataFiles(files);
+    }
     // var files = document.getElementById('filedata').files;
     console.log("in addDataFile, files: ",files);
     var up_files = [];
@@ -225,8 +293,7 @@ function addDataFile(files) {
     }
 
     //var tree = $("#tree").dynatree("getTree");
-    var tree = fileview.curr_tree_selection;
-    console.log("current tree selection: ", tree);
+    
 
     var cnt = 0;
     //console.log("webkitRelativePath: ",files);
@@ -456,7 +523,7 @@ function displayStoredFiles(file_json) {
     for (var i = 0, numfs = files.length; i < numfs; i++) {
         var file = files[i];
         lfn = file.Path;
-        // console.log(file.DataSetId);
+        console.log(file.FileId);
         lfn_parts = lfn.split("/");
 
         var key_str = "";
@@ -479,7 +546,7 @@ function displayStoredFiles(file_json) {
                     isFolder: dir,
                     hideCheckbox: dir,
                     theFile: null,
-                    data_id: file.DataSetId
+                    data_id: file.FileId
                 }
                 node = last.addChild(node_data);
             }
@@ -536,13 +603,23 @@ function renderFileRightPanel(fileNodes) {
     // add header
     $("#file-panel").append(file_list_header);
     //console.log(fileNodes.length)
-    var template = Hogan.compile(file_row_template_text, {
-        delimiters: '<% %>'
-    });
-    for (var i = 0; i < fileNodes.length; i++) {
-        var output = template.render(fileNodes[i]);
-        $("#file-panel").append(output)
-    }
+   
+        var template = Hogan.compile(file_row_template_text, {
+            delimiters: '<% %>'
+        });
+        for (var i = 0; i < fileNodes.length; i++) {
+            var output = template.render(fileNodes[i]);
+            $("#file-panel").append(output)
+        }
+    
+
+}
+function clearRightPanel(){
+    // clear any existing files in the DOM list
+    $("#file-panel").empty();
+
+    // add header
+    $("#file-panel").append(file_list_header);
 
 }
 
@@ -609,7 +686,7 @@ var file_row_template_text = [
     '        </li>',
     '        <li><a href="#" class="tiny button warning">Edit</a>',
     '        </li>',
-    '        <li><a href="#" class="tiny button alert">Delete</a>',
+    '        <li><a href="#" class="tiny button alert" onclick = "deleteFile(<%%>);">Delete</a>',
     '            </li>',
     '   </ul>',
     '             </div>',
